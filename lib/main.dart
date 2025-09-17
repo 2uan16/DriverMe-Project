@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
-import 'config/themes.dart';
-import 'screens/common/splash_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'config/themes.dart';  // Import nhưng chưa dùng?
+import 'screens/common/splash_screen.dart';  // Import nhưng chưa dùng?
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const MyApp());
 }
 
@@ -16,8 +22,6 @@ class MyApp extends StatelessWidget {
       title: 'DriverMe',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.light,
       home: const SplashScreen(),
     );
   }
