@@ -1,5 +1,6 @@
-name: driverme_project
-description: "Final year project - Driver booking application"
+name: driverme_app
+description: DriverMe - Ứng dụng thuê tài xế
+
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -10,55 +11,29 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Firebase Core
-  firebase_core: ^2.32.0
-  firebase_auth: ^4.20.0
-  cloud_firestore: ^4.17.5
-  firebase_storage: ^11.7.7
-  firebase_messaging: ^14.9.4
-
-
-    # State Management
+  # State Management
   provider: ^6.1.1
 
-  # Maps & Location
-  google_maps_flutter: ^2.5.0
-  geolocator: ^10.1.0
-  geocoding: ^2.1.1
-  flutter_polyline_points: ^2.0.0
-
-  # UI Components
-  flutter_animate: ^4.3.0
-  cached_network_image: ^3.3.0
-  shimmer: ^3.0.0
-  flutter_spinkit: ^5.2.0
-
-  # Network & API
-  dio: ^5.4.0
+  # Navigation
+  go_router: ^13.0.0
 
   # Storage
   shared_preferences: ^2.2.2
 
-  # Utils
-  intl: ^0.18.1
-  image_picker: ^1.0.4
-  permission_handler: ^11.1.0
-  url_launcher: ^6.2.2
+  # Network
+  http: ^1.5.0
+  socket_io_client: ^2.0.3+1
 
-  # Icons & UI
-  cupertino_icons: ^1.0.6
-  flutter_vector_icons: ^2.0.0
-  google_fonts: ^6.1.0
+  # Maps & Location
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.0
+  geolocator: ^14.0.2
+  geocoding: ^4.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.1
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true
-
-  # Uncomment khi có assets
-  # assets:
-  #   - assets/images/
-  #   - assets/icons/
