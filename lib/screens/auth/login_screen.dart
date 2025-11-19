@@ -15,8 +15,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-
-  // ✅ THÊM DÒNG NÀY
   final AuthService _authService = AuthService();
 
   bool _isLoading = false;

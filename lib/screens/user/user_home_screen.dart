@@ -116,14 +116,12 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
       selectedIndex: _currentIndex,
       onDestinationSelected: (i) {
         setState(() => _currentIndex = i);
-
-        // Navigate based on index
         switch (i) {
           case 0:
-          // Home - already here
+            GoRouter.of(context).push('/user-home');
             break;
           case 1:
-          // History
+            GoRouter.of(context).push('/user-history');
             break;
           case 2:
           // Notifications

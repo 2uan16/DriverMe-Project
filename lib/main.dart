@@ -1,3 +1,7 @@
+import 'package:driverme_app/screens/driver/driver_earning_screen.dart';
+import 'package:driverme_app/screens/driver/driver_profile_screen.dart';
+import 'package:driverme_app/screens/user/trip_tracking_screen.dart';
+import 'package:driverme_app/screens/user/user_history_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +25,7 @@ import 'screens/driver/available_bookings_screen.dart';
 import 'screens/driver/driver_bookings_screen.dart';
 import 'screens/user/point_to_point_booking.dart';
 import 'screens/user/user_profile_screen.dart';
+import 'screens/driver/driver_trip_flow_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -107,6 +112,33 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/user-profile',
       builder: (context, state) => const UserProfileScreen(),
+    ),
+    GoRoute(
+      path: '/trip-tracking/:bookingId',
+      builder: (context, state) => TripTrackingScreen(bookingId: state.pathParameters['bookingId']!),
+    ),
+    GoRoute(
+      path: '/driver-home',
+      builder: (context, state) => const DriverHomeScreen(),
+    ),
+    GoRoute(
+      path: '/driver/trip-flow',
+      builder: (context, state) {
+        final bookingId = state.extra as String?; 
+        return DriverTripFlowScreen(bookingId: bookingId);
+      },
+    ),
+    GoRoute(
+      path: '/user-history',
+      builder: (context, state) => const UserHistoryScreen(),
+    ),
+    GoRoute(
+      path: '/driver/earnings',
+      builder: (context, state) => const DriverEarningsScreen(),
+    ),
+    GoRoute(
+      path: '/driver/profile',
+      builder: (context, state) => const DriverProfileScreen(),
     ),
   ],
 );

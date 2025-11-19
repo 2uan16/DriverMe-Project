@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/auth_service.dart';
+import 'incoming_request_popup.dart'; // Ensure this import is correct
 
 class DriverHomeScreen extends StatefulWidget {
-  const DriverHomeScreen({Key? key}) : super(key: key);
+  const DriverHomeScreen({super.key});
 
   @override
   State<DriverHomeScreen> createState() => _DriverHomeScreenState();
@@ -13,17 +15,41 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   final AuthService _authService = AuthService();
   bool _isAvailable = false;
   bool _loading = false;
+  Timer? _simulationTimer;
+
+  // ✅ ADDED: State variable for the driver's name
+  String _driverName = 'Tài xế'; 
+  int _todayTrips = 0;
+  double _todayEarnings = 0.0;
 
   @override
   void initState() {
     super.initState();
     _loadDriverStatus();
+    _loadTodayStats(); 
   }
 
+  // ✅ UPDATED: Fetch name from AuthService cache
   Future<void> _loadDriverStatus() async {
-    // TODO: Load driver availability status from API
+    final user = _authService.user;
+    if (user != null && user.containsKey('name')) {
+        setState(() {
+            // Use 'name' field if available, fallback to 'full_name'
+            _driverName = user['name'] ?? user['full_name'] ?? 'Tài xế';
+        });
+    }
+
+    // TODO: Load real driver availability status from API
     setState(() {
       _isAvailable = false; // Default offline
+    });
+  }
+
+  Future<void> _loadTodayStats() async {
+    // Mock data for demonstration
+    setState(() {
+      _todayTrips = 4; 
+      _todayEarnings = 500000;
     });
   }
 
@@ -31,22 +57,42 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     setState(() => _loading = true);
 
     try {
-      // TODO: Update availability status via API
-      await Future.delayed(const Duration(seconds: 1)); // Simulate API call
+      await Future.delayed(const Duration(seconds: 1)); 
 
       setState(() {
         _isAvailable = !_isAvailable;
       });
 
-      _showSnackBar(
-        _isAvailable ? 'Bạn đã online và có thể nhận chuyến' : 'Bạn đã offline',
-        isError: false,
-      );
+      if (_isAvailable) {
+        _showSnackBar('Bạn đã online. Đang tìm chuyến...', isError: false);
+        _simulationTimer = Timer(const Duration(seconds: 3), _showIncomingRequest);
+      } else {
+        _showSnackBar('Bạn đã offline', isError: false);
+        _simulationTimer?.cancel();
+      }
     } catch (e) {
       _showSnackBar('Lỗi cập nhật trạng thái: $e');
     } finally {
       setState(() => _loading = false);
     }
+  }
+
+  void _showIncomingRequest() {
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const IncomingRequestSheet(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _simulationTimer?.cancel();
+    super.dispose();
   }
 
   void _showSnackBar(String message, {bool isError = true}) {
@@ -61,7 +107,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = _authService.user;
+    // final user = _authService.user; // No longer needed here
 
     return Scaffold(
       appBar: AppBar(
@@ -71,22 +117,22 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.account_circle),
-            onPressed: () {
-              // TODO: Navigate to profile
-              _showSnackBar('Tính năng profile đang phát triển...', isError: false);
-            },
+            onPressed: () => context.push('/driver/profile'),
           ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await _authService.logout();
-              context.go('/role-selection');
+              if (mounted) context.go('/role-selection');
             },
           ),
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _loadDriverStatus,
+        onRefresh: () async {
+          await _loadDriverStatus();
+          await _loadTodayStats(); 
+        },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
@@ -113,8 +159,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // ✅ UPDATED: Use the state variable for the name
                             Text(
-                              'Xin chào, ${user?['full_name'] ?? 'Tài xế'}!',
+                              'Xin chào, $_driverName!', 
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -196,13 +243,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
               const SizedBox(height: 20),
 
-              // Today's Stats
+              // Today's Stats Row using variables
               Row(
                 children: [
                   Expanded(
                     child: _buildStatCard(
                       'Chuyến Hôm Nay',
-                      '0',
+                      _todayTrips.toString(), // Dynamic value
                       Icons.directions_car,
                       Colors.blue,
                     ),
@@ -211,7 +258,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   Expanded(
                     child: _buildStatCard(
                       'Thu Nhập',
-                      '0đ',
+                      '${_todayEarnings.toStringAsFixed(0)}đ', // Dynamic value
                       Icons.attach_money,
                       Colors.green,
                     ),
@@ -236,7 +283,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 'Xem danh sách chuyến đang chờ tài xế',
                 Icons.assignment,
                 Colors.orange,
-                    () => context.push('/driver/available-bookings'),
+                () => context.push('/driver/available-bookings'),
               ),
 
               const SizedBox(height: 12),
@@ -246,7 +293,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 'Quản lý chuyến đang làm và lịch sử',
                 Icons.history,
                 Colors.purple,
-                    () => context.push('/driver/my-bookings'),
+                () => context.push('/driver/my-bookings'),
               ),
 
               const SizedBox(height: 12),
@@ -256,7 +303,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 'Xem báo cáo thu nhập chi tiết',
                 Icons.analytics,
                 Colors.teal,
-                    () => _showSnackBar('Tính năng đang phát triển...', isError: false),
+                () => context.push('/driver/earnings'), 
               ),
 
               const SizedBox(height: 20),
@@ -296,7 +343,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         ),
       ),
 
-      // FAB for quick online toggle
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _loading ? null : _toggleAvailability,
         backgroundColor: _isAvailable ? Colors.red : Colors.green,

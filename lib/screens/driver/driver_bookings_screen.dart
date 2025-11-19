@@ -46,7 +46,7 @@ class _DriverBookingsScreenState extends State<DriverBookingsScreen>
         final data = json.decode(res.body);
         if (data['success'] == true) {
           final allBookings = data['bookings'] as List<dynamic>;
-          final driverId = _authService.user?['id']?.toString();
+          final driverId = _authService.user?['uid']?.toString();
 
           // Filter bookings assigned to this driver
           final myBookings = allBookings

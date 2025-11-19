@@ -88,7 +88,7 @@ router.post('/', authenticateToken, (req, res) => {
       preferences                     // ✅ MỚI
     } = req.body;
 
-    console.log('📥 Received booking data:', req.body);
+    console.log('  Received booking data:', req.body);
 
     // ✅ VALIDATION
     if (!pickup_address || !pickup_lat || !pickup_lng) {

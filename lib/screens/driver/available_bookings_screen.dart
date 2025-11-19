@@ -86,8 +86,12 @@ class _AvailableBookingsScreenState extends State<AvailableBookingsScreen> {
       final data = json.decode(res.body);
 
       if (res.statusCode == 200 && data['success'] == true) {
-        _showSnackBar(data['message'], isError: false);
         _loadAvailableBookings(); // Refresh list
+        _showSnackBar(data['message'], isError: false);
+        if (mounted) {
+           // We pass the bookingId as an extra or path parameter
+           context.push('/driver/trip-flow', extra: bookingId); 
+        }
       } else {
         _showSnackBar(data['message'] ?? 'Không thể nhận chuyến');
       }

@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
+import 'dart:async';
+import 'trip_tracking_screen.dart';
 
 // Config
 import '../../config/api_keys.dart';
@@ -38,23 +40,22 @@ class PointToPointBookingScreen extends StatefulWidget {
 class _PointToPointBookingScreenState extends State<PointToPointBookingScreen> {
   final BookingService _bookingService = BookingService();
 
-  // ===== Location data only (không tự vẽ polyline/marker ở đây) =====
+  //Location data
   LatLng? _pickupLatLng;
   LatLng? _dropoffLatLng;
   String? pickup;
   String? dropoff;
   bool locating = true;
 
-  // ===== Service selection =====
-  List<CarService> services = []; // ⚠️ BẮT ĐẦU RỖNG → chưa có tuyến thì KHÔNG có giá
+  List<CarService> services = [];
   int selectedServiceIndex = 0;
 
-  // ===== Route info =====
+  //Route info
   double? _distanceKm;
   String? _distanceText;
   String? _durationText;
 
-  // ===== Booking options =====
+  //Booking options
   String? voucherCode;
   PaymentMethod payment = const PaymentMethod.cash();
   bool noteFemaleDriver = false;
@@ -63,7 +64,7 @@ class _PointToPointBookingScreenState extends State<PointToPointBookingScreen> {
   bool noteInvoice = false;
   String notesText = '';
 
-  // ===== State =====
+  //State
   bool _isBooking = false;
   bool _isRouting = false;
 
@@ -73,9 +74,6 @@ class _PointToPointBookingScreenState extends State<PointToPointBookingScreen> {
     _initLocation();
   }
 
-  // ================================================================
-  // INIT LOCATION
-  // ================================================================
   Future<void> _initLocation() async {
     await Future.delayed(const Duration(milliseconds: 100));
     if (!mounted) return;
@@ -96,9 +94,7 @@ class _PointToPointBookingScreenState extends State<PointToPointBookingScreen> {
     setState(() {});
   }
 
-  // ================================================================
   // MAPBOX — Geocoding + Directions
-  // ================================================================
   Future<LatLng?> _mapboxGeocode(String query) async {
     final url = Uri.parse(
       'https://api.mapbox.com/geocoding/v5/mapbox.places/${Uri.encodeComponent(query)}.json'
@@ -116,10 +112,10 @@ class _PointToPointBookingScreenState extends State<PointToPointBookingScreen> {
   Future<void> _getRouteDirections(LatLng from, LatLng to) async {
     setState(() {
       _isRouting = true;
-      _distanceKm = null; // reset trước khi có kết quả
+      _distanceKm = null;
       _distanceText = null;
       _durationText = null;
-      services = []; // ⚠️ xoá giá khi đang tính lại tuyến
+      services = [];
     });
 
     final url = Uri.parse(
@@ -161,7 +157,6 @@ class _PointToPointBookingScreenState extends State<PointToPointBookingScreen> {
         return m == 0 ? '$h giờ' : '$h giờ $m phút';
       })();
 
-      // Khi đã có tuyến → xây dịch vụ kèm GIÁ
       final built = _buildServices(km, minutes, distanceText, durationText);
 
       setState(() {
@@ -176,10 +171,7 @@ class _PointToPointBookingScreenState extends State<PointToPointBookingScreen> {
       _showSnackBar('Lỗi tuyến đường: $e');
     }
   }
-
-  // ================================================================
   // SERVICES (Xây CHỈ khi đã có tuyến) — Ẩn giá trước đó
-  // ================================================================
   List<CarService> _buildServices(
       double km,
       int durationMin,
@@ -246,10 +238,7 @@ class _PointToPointBookingScreenState extends State<PointToPointBookingScreen> {
     if (minuteMatch != null) minutes = int.parse(minuteMatch.group(1)!);
     return hours * 60 + minutes;
   }
-
-  // ================================================================
   // USER ACTIONS
-  // ================================================================
   Future<void> _refreshLocation() async {
     final loc = context.read<LocationService>();
     final ok = await loc.getCurrentLocation();
@@ -334,7 +323,7 @@ class _PointToPointBookingScreenState extends State<PointToPointBookingScreen> {
   }
 
   void _resetAfterAddressChange() {
-    // ⚠️ Mỗi khi đổi địa chỉ → ẨN GIÁ + xoá dịch vụ cho tới khi có route mới
+    //Mỗi khi đổi địa chỉ → ẨN GIÁ + xoá dịch vụ cho tới khi có route mới
     _distanceKm = null;
     _distanceText = null;
     _durationText = null;
@@ -350,7 +339,7 @@ class _PointToPointBookingScreenState extends State<PointToPointBookingScreen> {
     if (!mounted) return;
     setState(() {
       voucherCode = (code ?? '').trim().isEmpty ? null : code!.trim();
-      // đổi ưu đãi không tính lại route; PricingService tự áp dụng khi tạo booking (tuỳ bạn cài)
+      // đổi ưu đãi không tính lại route; PricingService tự áp dụng khi tạo booking
     });
   }
 
@@ -419,9 +408,7 @@ class _PointToPointBookingScreenState extends State<PointToPointBookingScreen> {
     );
   }
 
-  // ================================================================
   // BOOKING
-  // ================================================================
   Future<void> _onBooking() async {
     if (_pickupLatLng == null || _dropoffLatLng == null || _distanceKm == null) {
       _showSnackBar('Vui lòng chọn điểm đón/điểm đến và chờ tính giá');
@@ -429,8 +416,11 @@ class _PointToPointBookingScreenState extends State<PointToPointBookingScreen> {
     }
 
     setState(() => _isBooking = true);
+
     try {
       final selected = services[selectedServiceIndex];
+      
+      // 1. Create the Booking
       final result = await _bookingService.createBooking(
         pickup: pickup!,
         pickupLatLng: _pickupLatLng!,
@@ -453,9 +443,11 @@ class _PointToPointBookingScreenState extends State<PointToPointBookingScreen> {
       if (!mounted) return;
 
       if (result['success'] == true) {
-        _showSnackBar('Đặt chuyến thành công! Mã: #${result['booking_id']}', isError: false);
-        await Future.delayed(const Duration(seconds: 2));
-        if (mounted) context.go('/user-home');
+        final bookingId = result['booking_id'].toString();
+        
+        // 2. Show "Finding Driver" Dialog & Start Polling
+        _showFindingDriverDialog(bookingId);
+        
       } else {
         _showSnackBar(result['message'] ?? 'Đặt chuyến thất bại');
       }
@@ -464,6 +456,17 @@ class _PointToPointBookingScreenState extends State<PointToPointBookingScreen> {
     } finally {
       if (mounted) setState(() => _isBooking = false);
     }
+  }
+
+  void _showFindingDriverDialog(String bookingId) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // User cannot dismiss by tapping outside
+      builder: (context) => _FindingDriverDialog(
+        bookingId: bookingId,
+        bookingService: _bookingService,
+      ),
+    );
   }
 
   void _showSnackBar(String message, {bool isError = true}) {
@@ -478,9 +481,7 @@ class _PointToPointBookingScreenState extends State<PointToPointBookingScreen> {
     );
   }
 
-  // ================================================================
   // UI
-  // ================================================================
   @override
   Widget build(BuildContext context) {
     final locService = context.watch<LocationService>();
@@ -490,7 +491,7 @@ class _PointToPointBookingScreenState extends State<PointToPointBookingScreen> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // Mapbox map hiển thị pickup/dropoff
+          // Mapbox map hiển thị điểm đón/trả
           Positioned.fill(
             child: MapboxWidget(
               pickup: _pickupLatLng,
@@ -499,7 +500,6 @@ class _PointToPointBookingScreenState extends State<PointToPointBookingScreen> {
             ),
           ),
 
-          // Back button
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.only(left: 12, top: 8),
@@ -516,7 +516,7 @@ class _PointToPointBookingScreenState extends State<PointToPointBookingScreen> {
             ),
           ),
 
-          // Pickup / Dropoff card
+          // Cảd cho Điểm đón / trả
           SafeArea(
             child: Align(
               alignment: Alignment.topCenter,
@@ -532,13 +532,11 @@ class _PointToPointBookingScreenState extends State<PointToPointBookingScreen> {
                   onPickTap: _selectPickup,
                   onDropTap: _selectDropoff,
                   onSwap: _swapLocations,
-                  // Bạn có thể thêm một hint nhỏ trong widget để báo "Nhập điểm đến để hiện giá"
                 ),
               ),
             ),
           ),
 
-          // Bottom panel — sẽ KHÔNG có giá nếu services rỗng
           BookingBottomPanel(
             services: services,
             selectedServiceIndex: selectedServiceIndex,
@@ -554,6 +552,183 @@ class _PointToPointBookingScreenState extends State<PointToPointBookingScreen> {
             onBookTap: _onBooking,
           ),
         ],
+      ),
+    );
+  }
+}
+
+//Class tìm tài xế
+class _FindingDriverDialog extends StatefulWidget {
+  final String bookingId;
+  final BookingService bookingService;
+
+  const _FindingDriverDialog({
+    required this.bookingId,
+    required this.bookingService,
+  });
+
+  @override
+  State<_FindingDriverDialog> createState() => _FindingDriverDialogState();
+}
+
+class _FindingDriverDialogState extends State<_FindingDriverDialog> {
+  Timer? _timer;
+  bool _driverFound = false;
+  Map<String, dynamic>? _bookingData;
+  int _countdown = 5; // Auto-redirect countdown
+
+  @override
+  void initState() {
+    super.initState();
+    _startPolling();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startPolling() {
+    // Poll every 3 seconds
+    _timer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+      final result = await widget.bookingService.getBookingStatus(widget.bookingId);
+      
+      if (result['success'] == true) {
+        final booking = result['booking'];
+        final status = booking['status'];
+
+        // If driver accepted
+        if (status == 'accepted' || status == 'in_progress') {
+          _timer?.cancel(); // Stop polling
+          if (mounted) {
+            setState(() {
+              _driverFound = true;
+              _bookingData = booking;
+            });
+            _startRedirectCountdown();
+          }
+        }
+      }
+    });
+  }
+
+  void _startRedirectCountdown() {
+    Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+      setState(() {
+        if (_countdown > 0) {
+          _countdown--;
+        } else {
+          timer.cancel();
+          _goToTrackingScreen();
+        }
+      });
+    });
+  }
+
+  void _goToTrackingScreen() {
+    Navigator.pop(context); // Close Dialog
+    
+    // Navigate to Trip Tracking with Booking ID
+    Navigator.pushReplacement(
+      context, 
+      MaterialPageRoute(
+        builder: (_) => TripTrackingScreen(bookingId: widget.bookingId)
+      )
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // VIEW 1: Finding Driver
+    if (!_driverFound) {
+      return PopScope(
+        canPop: false,
+        child: AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: Color(0xFF08B24B)),
+              const SizedBox(height: 20),
+              const Text("Đang tìm tài xế...", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              const Text("Vui lòng chờ trong giây lát", style: TextStyle(color: Colors.grey)),
+              const SizedBox(height: 20),
+              OutlinedButton(
+                onPressed: () {
+                  _timer?.cancel();
+                  Navigator.pop(context); // Cancel finding
+                  // TODO: Call API to cancel booking
+                },
+                child: const Text("Hủy tìm kiếm", style: TextStyle(color: Colors.red)),
+              )
+            ],
+          ),
+        ),
+      );
+    }
+
+    // VIEW 2: Driver Found!
+    final driverName = _bookingData?['driver_name'] ?? 'Tài xế DriverMe';
+    // Mock rating since backend might not send it yet
+    const driverRating = 4.9; 
+    
+    return PopScope(
+      canPop: false,
+      child: AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle, color: Colors.green, size: 50),
+            const SizedBox(height: 12),
+            const Text("Tài xế đã nhận chuyến!", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            
+            // Driver Info Card
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const CircleAvatar(backgroundColor: Colors.grey, child: Icon(Icons.person, color: Colors.white)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(driverName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Row(
+                          children: const [
+                            Icon(Icons.star, size: 14, color: Colors.amber),
+                            Text(" $driverRating", style: TextStyle(fontSize: 12)),
+                          ],
+                        )
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _goToTrackingScreen,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF08B24B),
+                minimumSize: const Size(double.infinity, 45),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text("Theo dõi chuyến đi", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(height: 8),
+            Text("Tự động chuyển sau $_countdown s", style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          ],
+        ),
       ),
     );
   }

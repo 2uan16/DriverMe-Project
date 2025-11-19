@@ -8,17 +8,11 @@ class AuthService {
   static const String _tokenKey = 'auth_token';
   static const String _userKey = 'user_data';
 
-  // Cache user data in memory
   Map<String, dynamic>? _cachedUser;
 
-  // ✅ Cache working backend URL
   static String? _workingBackendUrl;
 
-  // ============================================
-  // ✅ AUTO-DETECT WORKING BACKEND URL
-  // ============================================
   Future<String> _getWorkingBackendUrl() async {
-    // Nếu đã tìm được URL hoạt động, dùng luôn
     if (_workingBackendUrl != null) {
       return _workingBackendUrl!;
     }
@@ -46,7 +40,7 @@ class AuthService {
     }
 
     // Nếu không URL nào hoạt động, dùng URL đầu tiên
-    print('  ⚠️ No working URL found, using default');
+    print('    No working URL found, using default');
     _workingBackendUrl = ApiKeys.backendBaseUrl;
     return _workingBackendUrl!;
   }
@@ -151,20 +145,16 @@ class AuthService {
     }
   }
 
-  // ============================================
-  // ✅ LOGIN - WITH AUTO-RETRY
-  // ============================================
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,
   }) async {
     try {
-      print('🔐 Attempting login...');
+      print('Attempting login...');
 
-      // ✅ Get working backend URL
       final backendUrl = await _getWorkingBackendUrl();
 
-      print('📡 Backend URL: $backendUrl');
+      print('Backend URL: $backendUrl');
 
       final response = await http.post(
         Uri.parse('$backendUrl/api/auth/login'),
@@ -175,8 +165,8 @@ class AuthService {
         }),
       ).timeout(const Duration(seconds: 10));
 
-      print('📥 Response status: ${response.statusCode}');
-      print('📥 Response body: ${response.body}');
+      print('  Response status: ${response.statusCode}');
+      print('  Response body: ${response.body}');
 
       final data = json.decode(response.body);
 
@@ -190,7 +180,7 @@ class AuthService {
         await prefs.setString(_tokenKey, token);
         await prefs.setString(_userKey, json.encode(user));
 
-        print('✅ Login successful for: ${user['email']}');
+        print('Login successful for: ${user['email']}');
 
         return {
           'success': true,
@@ -198,7 +188,7 @@ class AuthService {
           'message': data['message'] ?? 'Đăng nhập thành công',
         };
       } else {
-        print('❌ Login failed: ${data['message']}');
+        print('Login failed: ${data['message']}');
 
         return {
           'success': false,
@@ -206,7 +196,7 @@ class AuthService {
         };
       }
     } catch (e) {
-      print('❌ Login error: $e');
+      print('Login error: $e');
 
       // Reset cached URL để retry lần sau
       _workingBackendUrl = null;
@@ -218,9 +208,6 @@ class AuthService {
     }
   }
 
-  // ============================================
-  // ✅ REGISTER - WITH AUTO-RETRY
-  // ============================================
   Future<Map<String, dynamic>> register({
     required String email,
     required String password,
@@ -234,7 +221,7 @@ class AuthService {
       // ✅ Get working backend URL
       final backendUrl = await _getWorkingBackendUrl();
 
-      print('📡 Backend URL: $backendUrl');
+      print('Backend URL: $backendUrl');
 
       final response = await http.post(
         Uri.parse('$backendUrl/api/auth/register'),
@@ -248,7 +235,7 @@ class AuthService {
         }),
       ).timeout(const Duration(seconds: 10));
 
-      print('📥 Response status: ${response.statusCode}');
+      print('Response status: ${response.statusCode}');
 
       final data = json.decode(response.body);
 
@@ -262,7 +249,7 @@ class AuthService {
         await prefs.setString(_tokenKey, token);
         await prefs.setString(_userKey, json.encode(user));
 
-        print('✅ Registration successful for: ${user['email']}');
+        print('Registration successful for: ${user['email']}');
 
         return {
           'success': true,
@@ -270,7 +257,7 @@ class AuthService {
           'message': data['message'] ?? 'Đăng ký thành công',
         };
       } else {
-        print('❌ Registration failed: ${data['message']}');
+        print('Registration failed: ${data['message']}');
 
         return {
           'success': false,
@@ -278,7 +265,7 @@ class AuthService {
         };
       }
     } catch (e) {
-      print('❌ Registration error: $e');
+      print('Registration error: $e');
 
       // Reset cached URL
       _workingBackendUrl = null;
@@ -299,9 +286,6 @@ class AuthService {
     print('✅ Logged out successfully');
   }
 
-  // ============================================
-  // ✅ AUTHENTICATED REQUEST - WITH AUTO-RETRY
-  // ============================================
   Future<http.Response> authenticatedRequest({
     required String method,
     required String endpoint,
@@ -314,18 +298,17 @@ class AuthService {
         throw Exception('No authentication token found');
       }
 
-      // ✅ Get working backend URL
       final backendUrl = await _getWorkingBackendUrl();
 
       // Build full URL
       final fullUrl = '$backendUrl$endpoint';
 
-      print('🔑 Token: ${token.substring(0, 20)}...');
-      print('📡 Endpoint: $fullUrl');
-      print('📤 Method: $method');
+      print('Token: ${token.substring(0, 20)}...');
+      print('Endpoint: $fullUrl');
+      print('Method: $method');
 
       if (body != null) {
-        print('📤 Body: ${json.encode(body)}');
+        print('Body: ${json.encode(body)}');
       }
 
       final headers = {
@@ -365,16 +348,24 @@ class AuthService {
             headers: headers,
           ).timeout(const Duration(seconds: 10));
           break;
+        
+        case 'PATCH':
+          response = await http.patch(
+            Uri.parse(fullUrl),
+            headers: headers,
+            body: body != null ? json.encode(body) : null,
+          ).timeout(const Duration(seconds: 10));
+          break;
 
         default:
           throw Exception('Unsupported HTTP method: $method');
       }
 
-      print('📥 Response status: ${response.statusCode}');
+      print('Response status: ${response.statusCode}');
 
       return response;
     } catch (e) {
-      print('❌ Auth request error: $e');
+      print('Auth request error: $e');
 
       // Reset cached URL để retry lần sau
       _workingBackendUrl = null;

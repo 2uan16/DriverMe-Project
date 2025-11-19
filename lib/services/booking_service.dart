@@ -42,7 +42,7 @@ class BookingService {
         if (preferences != null) 'preferences': preferences,
       };
 
-      print('📤 Creating booking: $bookingData');
+      print('Creating booking: $bookingData');
 
       final response = await _authService.authenticatedRequest(
         method: 'POST',
@@ -51,7 +51,7 @@ class BookingService {
       );
 
       final responseData = json.decode(response.body);
-      print('📥 Response: $responseData');
+      print('  Response: $responseData');
 
       if (response.statusCode == 201 && responseData['success'] == true) {
         return {
@@ -68,11 +68,26 @@ class BookingService {
         };
       }
     } catch (e) {
-      print('❌ Booking error: $e');
+      print('Booking error: $e');
       return {
         'success': false,
         'message': 'Lỗi kết nối: $e',
       };
+    }
+  }
+  Future<Map<String, dynamic>> getBookingStatus(String bookingId) async {
+    try {
+      final response = await _authService.authenticatedRequest(
+        method: 'GET',
+        endpoint: '${AppConfig.bookingEndpoint}/$bookingId',
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+      return {'success': false, 'message': 'Failed to get status'};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
     }
   }
 }
